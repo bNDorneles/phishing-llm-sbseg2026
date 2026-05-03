@@ -1,0 +1,41 @@
+# Secrets and local environment
+.env
+.venv/
+.vscode/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Operating system and logs
+.DS_Store
+*.log
+
+# Local datasets and imported archives
+data/raw/*
+data/processed/*
+data/baseline_historico/*
+*.zip
+*.rar
+*.csv
+
+# Experiment outputs
+results/*
+raw_responses/
+plots/
+shap/
+**/raw_responses/
+**/plots/
+**/shap/
+
+# Generated reports. Keep only the explanatory README in Git.
+reports/CHANGELOG_EXPERIMENTOS.md
+reports/0*_*.md
+reports/[0-9][0-9]_*.md
+
+# Keep folder structure in the repository
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/baseline_historico/.gitkeep
+!results/.gitkeep
+!reports/README.md

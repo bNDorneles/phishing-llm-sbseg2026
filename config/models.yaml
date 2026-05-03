@@ -1,0 +1,36 @@
+models:
+  - name: mock
+    provider: mock
+    enabled: false
+    model_id: heuristic-mock
+    temperature: 0.0
+    max_tokens: 700
+
+  - name: groq-llama
+    provider: groq
+    enabled: true
+    model_id: llama-3.1-8b-instant
+    temperature: 0.0
+    max_tokens: 700
+
+  - name: openai-gpt
+    provider: openai
+    enabled: true
+    model_id: gpt-4o-mini
+    temperature: 0.0
+    max_tokens: 700
+
+  - name: gemini
+    provider: gemini
+    enabled: true
+    model_id: gemini-1.5-flash
+    temperature: 0.0
+    max_tokens: 700
+
+  - name: deepseek
+    provider: deepseek
+    enabled: true
+    model_id: deepseek-chat
+    temperature: 0.0
+    max_tokens: 700
+

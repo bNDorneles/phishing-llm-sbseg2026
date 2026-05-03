@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+title: "phishing-llm-sbseg2026"
+message: "If you use this software, please cite it."
+authors:
+  - family-names: "Dorneles"
+    given-names: "Bernardo"
+year: 2026
+

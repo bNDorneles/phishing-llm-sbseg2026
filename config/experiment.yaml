@@ -1,0 +1,14 @@
+experiment:
+  name: phishing_llm_sbseg2026
+  seed: 42
+  sample_size: 1009
+  target_safe: 602
+  target_phishing: 407
+  phishing_label: phishing
+  safe_label: safe
+  input_dataset: data/raw/Phishing_Email.csv
+  sample_dataset: data/processed/phishing_sample_1009_seed42.csv
+  max_email_chars: 6000
+  retry_attempts: 3
+  retry_sleep_seconds: 2
+  sleep_between_requests_seconds: 3
