@@ -10,7 +10,7 @@ O foco do repositorio e pesquisa aplicada em ciberseguranca. Ele nao pretende pr
 
 ## Contexto Academico
 
-O projeto parte de uma linha metodologica anterior sobre avaliacao de LLMs para deteccao de phishing, atualizando o protocolo experimental com modelos recentes, multiplos provedores e uma estrutura mais completa de reprodutibilidade. A proposta preserva a ideia central de comparar modelos sob um mesmo prompt, uma mesma amostra e as mesmas metricas, mas organiza uma nova versao do estudo para 2026.
+O projeto parte de uma linha metodologica anterior sobre avaliacao de LLMs para deteccao de phishing, atualizando o protocolo experimental com modelos recentes executados via Groq e uma estrutura mais completa de reprodutibilidade. A proposta preserva a ideia central de comparar modelos sob um mesmo prompt, uma mesma amostra e as mesmas metricas, mas organiza uma nova versao do estudo para 2026.
 
 Tambem sao reaproveitadas ideias tecnicas de trabalhos com fake news, apenas como base de engenharia experimental: pipeline com LLM, geracao de dataset, integracao com Python, Random Forest, SHAP e relatorios. O dominio final permanece phishing.
 
@@ -31,7 +31,7 @@ Este repositorio foi estruturado como artefato de pesquisa para uma submissao ao
 - Remove emails vazios.
 - Normaliza labels para `phishing` e `safe`.
 - Gera amostra estratificada com seed fixa.
-- Executa LLMs via Groq, OpenAI, Gemini, DeepSeek ou `mock`.
+- Executa diferentes modelos hospedados na Groq, alem de `mock` para teste local.
 - Solicita resposta JSON padronizada.
 - Extrai 20 red flags de phishing.
 - Salva respostas brutas localmente.
@@ -86,13 +86,10 @@ Copie o exemplo:
 copy .env.example .env
 ```
 
-Preencha somente as chaves dos provedores que serao usados:
+Preencha a chave da Groq:
 
 ```env
 GROQ_API_KEY=
-OPENAI_API_KEY=
-GEMINI_API_KEY=
-DEEPSEEK_API_KEY=
 ```
 
 Nunca envie `.env` para o GitHub.
@@ -135,17 +132,24 @@ python scripts\run_experiment.py --models mock --limit 20 --run-id smoke_mock_20
 
 ## Experimento Real
 
-Habilite modelos em `config/models.yaml` alterando `enabled: false` para `enabled: true`, ou informe modelos explicitamente:
+Habilite modelos Groq em `config/models.yaml` alterando `enabled: false` para `enabled: true`, ou informe modelos explicitamente:
 
 ```powershell
-python scripts\run_experiment.py --models groq-llama --limit 20
-python scripts\run_experiment.py --models groq-llama openai-gpt gemini deepseek
+python scripts\run_experiment.py --models groq-llama-3-1-8b --limit 20
+python scripts\run_experiment.py --models groq-llama-3-1-8b groq-llama-3-3-70b groq-llama-4-scout groq-qwen3-32b --limit 20
 ```
+
+Modelos Groq configurados:
+
+- `groq-llama-3-1-8b`: `llama-3.1-8b-instant`
+- `groq-llama-3-3-70b`: `llama-3.3-70b-versatile`
+- `groq-llama-4-scout`: `meta-llama/llama-4-scout-17b-16e-instruct`
+- `groq-qwen3-32b`: `qwen/qwen3-32b`
 
 Para a amostra oficial completa:
 
 ```powershell
-python scripts\run_experiment.py --models groq-llama openai-gpt gemini deepseek
+python scripts\run_experiment.py --models groq-llama-3-1-8b groq-llama-3-3-70b groq-llama-4-scout groq-qwen3-32b
 ```
 
 ## Interpretacao dos Resultados
@@ -164,12 +168,12 @@ Os relatorios Markdown ficam em `reports/`.
 
 ## Rate Limit 429
 
-Erro `429 Too Many Requests` indica limite de requisicoes ou cota do provedor. Solucoes recomendadas:
+Erro `429 Too Many Requests` indica limite de requisicoes ou cota da Groq. Solucoes recomendadas:
 
 - reduzir `--limit` durante testes;
 - rodar um modelo por vez;
 - aumentar pausas e retries em `config/experiment.yaml`;
-- verificar cota e plano do provedor;
+- verificar cota e plano da Groq;
 - evitar repetir a amostra completa sem necessidade.
 
 ## Reproducibilidade
@@ -189,7 +193,7 @@ Para repetir uma execucao, mantenha o mesmo dataset, o mesmo `config/experiment.
 ## Proximos Passos
 
 - Criar comparador automatico entre resultados historicos e resultados 2026.
-- Adicionar controle de custo por provedor.
+- Adicionar controle de custo por modelo Groq.
 - Adicionar suporte a execucao em lotes com pausa entre requisicoes.
 - Consolidar tabelas finais para o artigo.
 - Criar pacote de artefatos anonimizados para submissao double blind.

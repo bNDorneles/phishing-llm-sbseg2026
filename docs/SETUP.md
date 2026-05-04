@@ -36,12 +36,9 @@ Edite `.env` localmente:
 
 ```env
 GROQ_API_KEY=
-OPENAI_API_KEY=
-GEMINI_API_KEY=
-DEEPSEEK_API_KEY=
 ```
 
-Preencha apenas os provedores que serao usados. O arquivo `.env` e ignorado pelo Git.
+O arquivo `.env` e ignorado pelo Git.
 
 ## 5. Preparar Dataset
 

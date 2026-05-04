@@ -20,6 +20,7 @@ class ExperimentConfig:
     max_email_chars: int
     retry_attempts: int
     retry_sleep_seconds: int
+    sleep_between_requests_seconds: float
 
 
 @dataclass(frozen=True)
@@ -99,6 +100,7 @@ def load_experiment_config(path: Path | None = None) -> ExperimentConfig:
         max_email_chars=int(data["max_email_chars"]),
         retry_attempts=int(data["retry_attempts"]),
         retry_sleep_seconds=int(data["retry_sleep_seconds"]),
+        sleep_between_requests_seconds=float(data.get("sleep_between_requests_seconds", 0)),
     )
 
 

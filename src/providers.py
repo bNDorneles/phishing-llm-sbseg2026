@@ -46,34 +46,18 @@ class LLMClient:
     def _call_provider(self, email_text: str) -> str:
         provider = self.config.provider
         if provider == "groq":
-            return _openai_compatible(
+            return _chat_completion(
                 base_url="https://api.groq.com/openai/v1/chat/completions",
                 api_key=os.environ["GROQ_API_KEY"],
                 config=self.config,
                 email_text=email_text,
             )
-        if provider == "openai":
-            return _openai_compatible(
-                base_url="https://api.openai.com/v1/chat/completions",
-                api_key=os.environ["OPENAI_API_KEY"],
-                config=self.config,
-                email_text=email_text,
-            )
-        if provider == "deepseek":
-            return _openai_compatible(
-                base_url="https://api.deepseek.com/chat/completions",
-                api_key=os.environ["DEEPSEEK_API_KEY"],
-                config=self.config,
-                email_text=email_text,
-            )
-        if provider == "gemini":
-            return _gemini(api_key=os.environ["GEMINI_API_KEY"], config=self.config, email_text=email_text)
         raise ValueError(f"Provider nao suportado: {provider}")
 
 
-def _openai_compatible(base_url: str, api_key: str, config: ModelConfig, email_text: str) -> str:
+def _chat_completion(base_url: str, api_key: str, config: ModelConfig, email_text: str) -> str:
     if requests is None:
-        raise RuntimeError("Instale requests para usar provedores remotos.")
+        raise RuntimeError("Instale requests para usar a API Groq.")
     payload = {
         "model": config.model_id,
         "temperature": config.temperature,
@@ -92,25 +76,6 @@ def _openai_compatible(base_url: str, api_key: str, config: ModelConfig, email_t
     )
     response.raise_for_status()
     return response.json()["choices"][0]["message"]["content"]
-
-
-def _gemini(api_key: str, config: ModelConfig, email_text: str) -> str:
-    if requests is None:
-        raise RuntimeError("Instale requests para usar provedores remotos.")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{config.model_id}:generateContent"
-    payload = {
-        "generationConfig": {
-            "temperature": config.temperature,
-            "maxOutputTokens": config.max_tokens,
-            "responseMimeType": "application/json",
-        },
-        "contents": [
-            {"role": "user", "parts": [{"text": f"{SYSTEM_PROMPT}\n\n{build_user_prompt(email_text)}"}]}
-        ],
-    }
-    response = requests.post(url, params={"key": api_key}, json=payload, timeout=90)
-    response.raise_for_status()
-    return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
 def mock_analysis(email_text: str) -> dict[str, Any]:

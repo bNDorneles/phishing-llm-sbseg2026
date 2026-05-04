@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -75,4 +76,6 @@ def run_model_on_dataset(
                 "parse_error": parse_error,
             }
         )
+        if model_config.provider != "mock" and experiment.sleep_between_requests_seconds > 0:
+            time.sleep(experiment.sleep_between_requests_seconds)
     return pd.DataFrame(rows)

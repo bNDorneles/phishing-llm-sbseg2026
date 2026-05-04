@@ -20,7 +20,7 @@ As respostas brutas dos LLMs sao preservadas localmente em:
 results/<run_id>/raw_responses/
 ```
 
-Esses arquivos nao sao versionados, pois podem conter dados sensiveis, custos altos para recriar e saidas longas dos provedores.
+Esses arquivos nao sao versionados, pois podem conter dados sensiveis, custos altos para recriar e saidas longas dos modelos.
 
 ## Como Repetir uma Execucao
 
@@ -36,5 +36,4 @@ python scripts\prepare_dataset.py
 python scripts\run_experiment.py --models mock --limit 20 --run-id smoke_mock_20
 ```
 
-Para provedores remotos, pequenas variacoes ainda podem ocorrer por mudancas de modelo, infraestrutura do provedor ou politicas internas da API.
-
+Para execucoes via Groq, pequenas variacoes ainda podem ocorrer por mudancas de modelo, infraestrutura da API ou politicas internas do servico.

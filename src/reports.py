@@ -78,7 +78,7 @@ def _write_limitations(path: Path) -> None:
     path.write_text(
         "# 11 - Limitacoes\n\n"
         "- Dataset em ingles; resultados nao generalizam diretamente para emails em portugues.\n"
-        "- Saidas de LLMs podem variar entre datas, versoes e provedores.\n"
+        "- Saidas de LLMs podem variar entre datas, versoes e modelos disponibilizados pela Groq.\n"
         "- O baseline historico deve ser comparado separadamente, sem mistura com novas inferencias.\n"
         "- SHAP explica o classificador Random Forest treinado sobre red flags, nao o raciocinio interno dos LLMs.\n"
         "- Custos e limites de API podem restringir repeticoes experimentais com todos os modelos.\n",

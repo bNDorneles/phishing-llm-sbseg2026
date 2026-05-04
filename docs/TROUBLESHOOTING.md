@@ -2,14 +2,14 @@
 
 ## 429 Too Many Requests
 
-O provedor limitou requisicoes ou cota.
+A Groq limitou requisicoes ou cota.
 
 Solucoes:
 
 - reduza `--limit`;
 - rode um modelo por vez;
 - aguarde alguns minutos;
-- revise cota e plano do provedor;
+- revise cota e plano da Groq;
 - aumente `retry_sleep_seconds` em `config/experiment.yaml`.
 
 ## API Key Invalida
@@ -20,7 +20,7 @@ Solucoes:
 
 - confira se `.env` existe;
 - confirme se a chave foi copiada sem espacos;
-- verifique se a chave pertence ao provedor correto;
+- verifique se a chave pertence a Groq;
 - abra um novo terminal apos editar `.env`.
 
 ## Modelo Nao Encontrado
@@ -31,8 +31,8 @@ Solucoes:
 
 - revise `model_id` em `config/models.yaml`;
 - confirme se o modelo esta disponivel na sua conta;
-- teste outro modelo do mesmo provedor;
-- confira a documentacao do provedor antes da rodada completa.
+- teste outro modelo Groq;
+- confira a documentacao da Groq antes da rodada completa.
 
 ## JSON Invalido Retornado por LLM
 
