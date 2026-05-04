@@ -23,6 +23,18 @@ Solucoes:
 - verifique se a chave pertence a Groq;
 - abra um novo terminal apos editar `.env`.
 
+## `GROQ_API_KEY` Nao Encontrada
+
+Se aparecer `KeyError: 'GROQ_API_KEY'` ou mensagem dizendo que `GROQ_API_KEY` nao foi encontrada, a chamada ainda nao chegou na Groq. O problema esta no carregamento da variavel local.
+
+Solucoes:
+
+- crie `.env` na raiz do projeto;
+- confira se o arquivo se chama exatamente `.env`, sem `.txt` no final;
+- deixe uma linha como `GROQ_API_KEY=sua_chave`;
+- como alternativa temporaria no PowerShell, execute `$env:GROQ_API_KEY="sua_chave"` antes de rodar o experimento;
+- rode o comando a partir da raiz do projeto.
+
 ## Modelo Nao Encontrado
 
 Sintomas comuns: `404`, `model not found` ou erro de modelo indisponivel.

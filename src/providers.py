@@ -13,16 +13,13 @@ except ModuleNotFoundError:
     requests = None
 
 try:
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv as _load_dotenv
 except ModuleNotFoundError:
-    def load_dotenv() -> None:
-        return None
+    _load_dotenv = None
 
-from src.config import ModelConfig
+from src.config import ModelConfig, ROOT
 from src.prompts import SYSTEM_PROMPT, build_user_prompt
 from src.red_flags import RED_FLAGS
-
-load_dotenv()
 
 
 class LLMClient:
@@ -30,6 +27,7 @@ class LLMClient:
         self.config = config
         self.retry_attempts = retry_attempts
         self.retry_sleep_seconds = retry_sleep_seconds
+        self.api_key = _required_api_key("GROQ_API_KEY") if config.provider == "groq" else None
 
     def analyze(self, email_text: str) -> str:
         if self.config.provider == "mock":
@@ -48,7 +46,7 @@ class LLMClient:
         if provider == "groq":
             return _chat_completion(
                 base_url="https://api.groq.com/openai/v1/chat/completions",
-                api_key=os.environ["GROQ_API_KEY"],
+                api_key=self.api_key or "",
                 config=self.config,
                 email_text=email_text,
             )
@@ -76,6 +74,36 @@ def _chat_completion(base_url: str, api_key: str, config: ModelConfig, email_tex
     )
     response.raise_for_status()
     return response.json()["choices"][0]["message"]["content"]
+
+
+def load_project_env() -> None:
+    env_path = ROOT / ".env"
+    if _load_dotenv is not None:
+        _load_dotenv(dotenv_path=env_path, override=True)
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8-sig").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and not os.environ.get(key):
+            os.environ[key] = value
+
+
+def _required_api_key(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise RuntimeError(
+            f"{name} nao encontrada. Crie um arquivo .env na raiz do projeto com {name}=sua_chave "
+            f"ou defina a variavel no terminal antes de executar."
+        )
+    return value
+
+
+load_project_env()
 
 
 def mock_analysis(email_text: str) -> dict[str, Any]:
