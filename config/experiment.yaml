@@ -11,4 +11,9 @@ experiment:
   max_email_chars: 6000
   retry_attempts: 3
   retry_sleep_seconds: 2
-  sleep_between_requests_seconds: 3
+  request_timeout_seconds: 90
+  backoff_base_seconds: 1
+  backoff_max_seconds: 30
+  groq_rate_limit_safety_factor: 1.2
+  groq_min_remaining_tokens: 0
+  sleep_between_requests_seconds: 0

@@ -40,6 +40,8 @@ GROQ_API_KEY=
 
 O arquivo `.env` e ignorado pelo Git.
 
+O backoff, timeout e controle de rate limit ja estao configurados em `config/experiment.yaml`. Nao e necessario adicionar outras variaveis no `.env` para uma execucao normal.
+
 ## 5. Preparar Dataset
 
 Adicione manualmente o dataset em:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import hashlib
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -19,8 +20,17 @@ def setup_logging(log_path: Path) -> None:
     )
 
 
+def log_event(logger: logging.Logger, level: int, event: str, **fields: Any) -> None:
+    payload = {"event": event, **fields}
+    logger.log(level, json.dumps(payload, ensure_ascii=False, default=str, sort_keys=True))
+
+
 def timestamp() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
+def content_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
 
 
 def extract_json(text: str) -> dict[str, Any]:
@@ -61,6 +71,20 @@ def normalize_response(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def failure_response() -> dict[str, Any]:
+    return {
+        "predicted_label": "",
+        "probability": 0.0,
+        **{flag: 0 for flag in RED_FLAGS},
+        "score_risco_geral": 0,
+        "score_confianca": 0,
+        "score_urgencia": 0,
+        "score_solicitacao_sensivel": 0,
+        "score_suspeita_links": 0,
+        "explanation": "",
+    }
+
+
 def _bounded_int(value: Any) -> int:
     try:
         return max(0, min(10, int(float(value))))
@@ -73,4 +97,3 @@ def _bounded_float(value: Any) -> float:
         return max(0.0, min(1.0, float(value)))
     except (TypeError, ValueError):
         return 0.0
-

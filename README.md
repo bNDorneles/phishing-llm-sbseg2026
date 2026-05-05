@@ -94,6 +94,8 @@ GROQ_API_KEY=
 
 Nunca envie `.env` para o GitHub.
 
+O retry, timeout e backoff ja ficam configurados automaticamente em `config/experiment.yaml`.
+
 ## Dados
 
 O dataset nao e versionado neste repositorio. Baixe ou adicione manualmente `Phishing_Email.csv` em:
@@ -135,21 +137,27 @@ python scripts\run_experiment.py --models mock --limit 20 --run-id smoke_mock_20
 Habilite modelos Groq em `config/models.yaml` alterando `enabled: false` para `enabled: true`, ou informe modelos explicitamente:
 
 ```powershell
-python scripts\run_experiment.py --models groq-llama-3-1-8b --limit 20
-python scripts\run_experiment.py --models groq-llama-3-1-8b groq-llama-3-3-70b groq-llama-4-scout groq-qwen3-32b --limit 20
+python scripts\run_experiment.py --models groq-gpt-oss-120b --limit 20
+python scripts\run_experiment.py --models groq-gpt-oss-120b groq-llama-3-3-70b groq-compound groq-qwen3-32b --limit 20
 ```
 
 Modelos Groq configurados:
 
-- `groq-llama-3-1-8b`: `llama-3.1-8b-instant`
+- `groq-gpt-oss-120b`: `openai/gpt-oss-120b`
 - `groq-llama-3-3-70b`: `llama-3.3-70b-versatile`
-- `groq-llama-4-scout`: `meta-llama/llama-4-scout-17b-16e-instruct`
+- `groq-compound`: `groq/compound`
 - `groq-qwen3-32b`: `qwen/qwen3-32b`
 
 Para a amostra oficial completa:
 
 ```powershell
-python scripts\run_experiment.py --models groq-llama-3-1-8b groq-llama-3-3-70b groq-llama-4-scout groq-qwen3-32b
+python scripts\run_experiment.py --models groq-gpt-oss-120b groq-llama-3-3-70b groq-compound groq-qwen3-32b
+```
+
+Se a sua conta bater limite diario antes dos 1.009 e-mails, rode novamente no dia seguinte com o mesmo `--run-id` e `--resume`. O pipeline reaproveita linhas com `status=success` e tenta apenas pendentes/falhas:
+
+```powershell
+python scripts\run_experiment.py --models groq-gpt-oss-120b --run-id final_1009_gpt_oss_120b --resume
 ```
 
 ## Interpretacao dos Resultados
@@ -158,6 +166,7 @@ Cada execucao cria uma pasta em `results/<run_id>/` com:
 
 - `final_results.csv`: saida vetorial completa.
 - `metrics_by_model.csv`: accuracy, precision, recall, F1, TP, TN, FP e FN.
+- `batch_summary_<modelo>.json`: validacao de cobertura do lote.
 - `false_positives.csv`: emails safe classificados como phishing.
 - `false_negatives.csv`: emails phishing classificados como safe.
 - `raw_responses/`: respostas brutas locais por modelo e email.
@@ -165,6 +174,9 @@ Cada execucao cria uma pasta em `results/<run_id>/` com:
 - `shap/`: importancia SHAP quando dependencias estao instaladas.
 
 Os relatorios Markdown ficam em `reports/`.
+
+Cada linha de `final_results.csv` recebe `status` final (`success` ou `failed`), `request_id`, `email_hash`, `attempts`, `latency_seconds`, `api_status_code` e `error_type`.
+Falhas de JSON estrito aparecem como `json_mode_validation`; nesses casos o pipeline faz uma tentativa automatica sem o modo JSON estrito da API e continua salvando a resposta bruta.
 
 ## Rate Limit 429
 
@@ -175,6 +187,57 @@ Erro `429 Too Many Requests` indica limite de requisicoes ou cota da Groq. Soluc
 - aumentar pausas e retries em `config/experiment.yaml`;
 - verificar cota e plano da Groq;
 - evitar repetir a amostra completa sem necessidade.
+
+As chamadas de API usam duas protecoes:
+
+- ritmo preventivo baseado nos limites oficiais da Groq por modelo;
+- retry com exponential backoff + full jitter para falhas transientes.
+- fallback automatico sem `response_format` quando a API falha com `json_validate_failed`, mantendo o parser local de JSON.
+
+Para os modelos configurados, os limites documentados sao:
+
+| Modelo | RPM | RPD | TPM | TPD |
+|---|---:|---:|---:|---:|
+| `openai/gpt-oss-120b` | 30 | 1K | 8K | 200K |
+| `llama-3.3-70b-versatile` | 30 | 1K | 12K | 100K |
+| `groq/compound` | 30 | 250 | 70K | - |
+| `qwen/qwen3-32b` | 60 | 1K | 6K | 500K |
+
+Quando a API retorna `429`, o pipeline respeita o header `retry-after`. Quando os headers `x-ratelimit-reset-tokens` ou `x-ratelimit-reset-requests` indicam reset necessario, o pipeline agenda espera antes da proxima chamada. Erros nao retentaveis, como autenticacao, modelo inexistente e payload invalido, falham sem repetir chamadas desnecessarias.
+
+O modelo `groq/compound` pode acionar modelos internos durante a execucao. Por isso, o pipeline usa uma cadencia mais conservadora para ele e tenta ler tambem mensagens como `Please try again in 705ms` quando o header `retry-after` nao vem preenchido.
+
+Alguns modelos Groq documentam RPD de 1.000 requisicoes, enquanto a amostra oficial tem 1.009 e-mails. Se sua organizacao estiver nesse limite, use `--resume` no mesmo `run-id` depois do reset diario para concluir os e-mails restantes sem refazer os sucessos.
+
+Configuracao padrao em `config/experiment.yaml`:
+
+```yaml
+retry_attempts: 3
+request_timeout_seconds: 90
+backoff_base_seconds: 1
+backoff_max_seconds: 30
+groq_rate_limit_safety_factor: 1.2
+groq_min_remaining_tokens: 0
+sleep_between_requests_seconds: 0
+```
+
+Na pratica, para usar o projeto voce so precisa configurar `GROQ_API_KEY`.
+
+## Logs e Observabilidade
+
+Cada execucao gera `results/<run_id>/experiment.log`. Os eventos sao registrados em formato estruturado JSON no campo da mensagem, com:
+
+- `email_id`;
+- `email_hash`;
+- `request_id`;
+- `provider_request_id`, quando retornado pela API;
+- modelo e `model_id`;
+- tentativa atual;
+- latencia;
+- status final;
+- tipo de erro.
+
+O conteudo completo do e-mail nao e logado. Para auditoria, respostas brutas ficam em `raw_responses/`, que nao deve ser versionado.
 
 ## Reproducibilidade
 

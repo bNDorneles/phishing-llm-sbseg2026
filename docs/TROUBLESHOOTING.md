@@ -10,7 +10,27 @@ Solucoes:
 - rode um modelo por vez;
 - aguarde alguns minutos;
 - revise cota e plano da Groq;
-- aumente `retry_sleep_seconds` em `config/experiment.yaml`.
+- aumente `groq_rate_limit_safety_factor` em `config/experiment.yaml` se ainda houver 429 em execucoes longas.
+
+O pipeline usa exponential backoff com full jitter para falhas transientes.
+
+Ele tambem respeita os headers oficiais da Groq:
+
+- `retry-after`;
+- `x-ratelimit-remaining-tokens`;
+- `x-ratelimit-reset-tokens`;
+- `x-ratelimit-remaining-requests`;
+- `x-ratelimit-reset-requests`.
+
+Se ainda houver 429 em execucoes longas, use apenas um modelo por vez ou aumente `groq_rate_limit_safety_factor`.
+
+Observacao sobre `groq/compound`: ele pode rotear internamente para outros modelos. Se aparecer uma mensagem de 429 citando outro `model`, o pipeline usa uma cadencia conservadora e tenta respeitar mensagens do corpo da resposta, como `Please try again in 705ms`. Para a rodada final de 1009 emails, prefira rodar um modelo por vez se sua cota da Groq estiver baixa.
+
+Se o limite for diario, a amostra de 1009 pode ultrapassar contas com RPD de 1000. Nesse caso, use o mesmo `--run-id` com `--resume` no dia seguinte:
+
+```powershell
+python scripts\run_experiment.py --models groq-gpt-oss-120b --run-id final_1009_gpt_oss_120b --resume
+```
 
 ## API Key Invalida
 
@@ -55,6 +75,18 @@ O pipeline tenta extrair JSON mesmo quando o modelo envolve a resposta em texto 
 - revise arquivos em `results/<run_id>/parse_errors.csv`;
 - revise a resposta bruta em `results/<run_id>/raw_responses/`;
 - reforce o prompt em `src/prompts.py`, mantendo o mesmo schema.
+
+Quando a Groq retorna `json_validate_failed` no modo JSON estrito, o erro aparece como `json_mode_validation`. O pipeline agora tenta automaticamente uma segunda chamada sem `response_format` e usa o parser local para extrair o JSON. Se mesmo assim houver falha, a linha fica com `status=failed`, sem interromper o lote.
+
+## Verificar Cobertura
+
+Se quiser confirmar que nenhum e-mail ficou sem status final, confira:
+
+```text
+results/<run_id>/batch_summary_<modelo>.json
+```
+
+O campo `coverage_ok` deve ser `true`.
 
 ## Matplotlib ou SHAP Nao Instalado
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,11 @@ class ExperimentConfig:
     max_email_chars: int
     retry_attempts: int
     retry_sleep_seconds: int
+    request_timeout_seconds: float
+    backoff_base_seconds: float
+    backoff_max_seconds: float
+    groq_rate_limit_safety_factor: float
+    groq_min_remaining_tokens: int
     sleep_between_requests_seconds: float
 
 
@@ -98,8 +104,15 @@ def load_experiment_config(path: Path | None = None) -> ExperimentConfig:
         input_dataset=ROOT / data["input_dataset"],
         sample_dataset=ROOT / data["sample_dataset"],
         max_email_chars=int(data["max_email_chars"]),
-        retry_attempts=int(data["retry_attempts"]),
+        retry_attempts=int(_env_override("LLM_MAX_ATTEMPTS", data["retry_attempts"])),
         retry_sleep_seconds=int(data["retry_sleep_seconds"]),
+        request_timeout_seconds=float(_env_override("LLM_REQUEST_TIMEOUT_SECONDS", data.get("request_timeout_seconds", 90))),
+        backoff_base_seconds=float(_env_override("LLM_BACKOFF_BASE_SECONDS", data.get("backoff_base_seconds", 1))),
+        backoff_max_seconds=float(_env_override("LLM_BACKOFF_MAX_SECONDS", data.get("backoff_max_seconds", 30))),
+        groq_rate_limit_safety_factor=float(
+            _env_override("GROQ_RATE_LIMIT_SAFETY_FACTOR", data.get("groq_rate_limit_safety_factor", 1.2))
+        ),
+        groq_min_remaining_tokens=int(_env_override("GROQ_MIN_REMAINING_TOKENS", data.get("groq_min_remaining_tokens", 0))),
         sleep_between_requests_seconds=float(data.get("sleep_between_requests_seconds", 0)),
     )
 
@@ -118,3 +131,8 @@ def load_model_configs(path: Path | None = None, only_enabled: bool = True) -> l
         for row in rows
     ]
     return [item for item in configs if item.enabled] if only_enabled else configs
+
+
+def _env_override(name: str, default: Any) -> Any:
+    value = os.environ.get(name)
+    return default if value is None or str(value).strip() == "" else value

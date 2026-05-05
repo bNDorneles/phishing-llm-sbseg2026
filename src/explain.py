@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from src.red_flags import RED_FLAGS
@@ -37,7 +39,14 @@ def run_shap_analysis(results: pd.DataFrame, output_dir: Path) -> None:
 
     explainer = shap.TreeExplainer(clf)
     shap_values = explainer.shap_values(x_test)
-    values = shap_values[1] if isinstance(shap_values, list) else shap_values
+    values = _positive_class_shap_values(shap_values, n_features=len(RED_FLAGS))
+    if values.ndim != 2 or values.shape[1] != len(RED_FLAGS):
+        (shap_dir / "shap_skipped.txt").write_text(
+            f"SHAP nao gerado: formato inesperado {values.shape} para {len(RED_FLAGS)} red flags.\n",
+            encoding="utf-8",
+        )
+        return
+
     importance = pd.DataFrame(
         {"feature": RED_FLAGS, "importance": abs(values).mean(axis=0)}
     ).sort_values("importance", ascending=False)
@@ -48,3 +57,25 @@ def run_shap_analysis(results: pd.DataFrame, output_dir: Path) -> None:
     plt.tight_layout()
     plt.savefig(shap_dir / "shap_summary.png", dpi=180, bbox_inches="tight")
     plt.close()
+
+
+def _positive_class_shap_values(shap_values: Any, n_features: int) -> np.ndarray:
+    """Normaliza saidas do SHAP para matriz 2D: amostras x features.
+
+    Dependendo da versao, classificacao binaria pode retornar lista por classe
+    ou array 3D com a dimensao de classes no ultimo eixo.
+    """
+    if isinstance(shap_values, list):
+        values = shap_values[1] if len(shap_values) > 1 else shap_values[0]
+    else:
+        values = shap_values
+
+    array = np.asarray(values)
+    if array.ndim == 3:
+        if array.shape[1] == n_features:
+            class_index = 1 if array.shape[2] > 1 else 0
+            array = array[:, :, class_index]
+        elif array.shape[2] == n_features:
+            class_index = 1 if array.shape[0] > 1 else 0
+            array = array[class_index, :, :]
+    return np.asarray(array)

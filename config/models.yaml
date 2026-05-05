@@ -6,31 +6,30 @@ models:
     temperature: 0.0
     max_tokens: 700
 
-  - name: groq-llama-3-1-8b
+  - name: groq-gpt-oss-120b
     provider: groq
     enabled: true
-    model_id: llama-3.1-8b-instant
+    model_id: openai/gpt-oss-120b
     temperature: 0.0
-    max_tokens: 700
+    max_tokens: 1200
 
   - name: groq-llama-3-3-70b
     provider: groq
     enabled: true
     model_id: llama-3.3-70b-versatile
     temperature: 0.0
-    max_tokens: 700
+    max_tokens: 900
 
-  - name: groq-llama-4-scout
+  - name: groq-compound
     provider: groq
     enabled: true
-    model_id: meta-llama/llama-4-scout-17b-16e-instruct
+    model_id: groq/compound
     temperature: 0.0
-    max_tokens: 700
+    max_tokens: 1000
 
   - name: groq-qwen3-32b
     provider: groq
     enabled: true
     model_id: qwen/qwen3-32b
     temperature: 0.0
-    max_tokens: 700
-
+    max_tokens: 1200

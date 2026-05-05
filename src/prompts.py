@@ -10,34 +10,28 @@ Analise o email com criterio consistente. Responda apenas JSON valido, sem markd
 
 
 def build_user_prompt(email_text: str) -> str:
-    flags = "\n".join(f"- {flag}" for flag in RED_FLAGS)
+    flags = json.dumps(RED_FLAGS, ensure_ascii=False)
     schema = {
-        "classification": "phishing ou safe",
-        "probability": "numero entre 0 e 1 representando probabilidade de phishing",
+        "classification": "phishing|safe",
+        "probability": 0.0,
         "red_flags": {flag: 0 for flag in RED_FLAGS},
         "scores": {
-            "risco_geral": "inteiro 0 a 10",
-            "confianca": "inteiro 0 a 10",
-            "urgencia": "inteiro 0 a 10",
-            "solicitacao_sensivel": "inteiro 0 a 10",
-            "suspeita_links": "inteiro 0 a 10",
+            "risco_geral": 0,
+            "confianca": 0,
+            "urgencia": 0,
+            "solicitacao_sensivel": 0,
+            "suspeita_links": 0,
         },
-        "explanation": "explicacao curta em uma frase",
+        "explanation": "max 120 chars",
     }
-    return f"""Classifique o email abaixo como phishing ou safe e identifique red flags.
-
-Red flags aceitas:
-{flags}
-
-Regras:
-- Use 1 quando a red flag estiver presente e 0 quando estiver ausente.
-- Nao invente campos fora do schema.
-- A resposta deve ser JSON valido.
-- A classificacao deve ser exatamente "phishing" ou "safe".
-
-Schema esperado:
-{json.dumps(schema, ensure_ascii=False, indent=2)}
-
-EMAIL:
-\"\"\"{email_text}\"\"\""""
-
+    return f"""Tarefa: classificar o email como phishing ou safe e marcar red flags.
+Responda somente um objeto JSON minificado, sem texto antes/depois.
+Use exatamente estas chaves: classification, probability, red_flags, scores, explanation.
+classification deve ser "phishing" ou "safe". probability deve ser numero entre 0 e 1.
+Cada red flag deve ser 1 se presente ou 0 se ausente. Nao adicione campos.
+Red flags: {flags}
+Schema: {json.dumps(schema, ensure_ascii=False, separators=(",", ":"))}
+Email:
+<<<
+{email_text}
+>>>"""
