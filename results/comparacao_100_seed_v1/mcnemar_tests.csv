@@ -1,0 +1,16 @@
+model_a,model_b,paired_samples,a_correct_b_wrong,a_wrong_b_correct,mcnemar_exact_p
+groq-gpt-oss-120b,tfidf_logistic_regression,90,2,11,0.0224609375
+groq-gpt-oss-120b,tfidf_random_forest,90,2,11,0.0224609375
+groq-compound,tfidf_random_forest,90,2,9,0.0654296875
+groq-compound,tfidf_logistic_regression,90,2,9,0.0654296875
+groq-llama-3-3-70b,tfidf_logistic_regression,90,2,7,0.1796875
+groq-llama-3-3-70b,tfidf_random_forest,90,2,7,0.1796875
+groq-gpt-oss-120b,groq-llama-3-3-70b,90,1,5,0.21875
+groq-gpt-oss-120b,groq-qwen3-32b,90,3,8,0.2265625
+groq-qwen3-32b,tfidf_random_forest,90,2,6,0.2890625
+groq-qwen3-32b,tfidf_logistic_regression,90,2,6,0.2890625
+groq-compound,groq-qwen3-32b,90,4,7,0.548828125
+groq-compound,groq-llama-3-3-70b,90,2,4,0.6875
+groq-compound,groq-gpt-oss-120b,90,5,3,0.7265625
+groq-llama-3-3-70b,groq-qwen3-32b,90,2,3,1.0
+tfidf_logistic_regression,tfidf_random_forest,90,1,1,1.0
