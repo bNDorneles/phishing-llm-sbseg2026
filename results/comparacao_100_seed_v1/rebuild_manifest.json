@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-05-10T17:23:23",
+  "run_id": "comparacao_100_seed_v1",
+  "min_success": 90,
+  "allow_partial": false,
+  "paper_plots_dir": "plots_paper",
+  "model_inputs": [
+    {
+      "model": "groq-gpt-oss-120b",
+      "path": "C:\\Users\\bNd\\Documents\\New project\\phishing-llm-sbseg2026\\results\\comparacao_100_seed_v1\\results_groq-gpt-oss-120b.csv",
+      "file_status": "found",
+      "rows": 90,
+      "success_count": 90,
+      "failed_count": 0,
+      "included": true
+    },
+    {
+      "model": "groq-llama-3-3-70b",
+      "path": "C:\\Users\\bNd\\Documents\\New project\\phishing-llm-sbseg2026\\results\\comparacao_100_seed_v1\\results_groq-llama-3-3-70b.csv",
+      "file_status": "found",
+      "rows": 90,
+      "success_count": 90,
+      "failed_count": 0,
+      "included": true
+    },
+    {
+      "model": "groq-qwen3-32b",
+      "path": "C:\\Users\\bNd\\Documents\\New project\\phishing-llm-sbseg2026\\results\\comparacao_100_seed_v1\\results_groq-qwen3-32b.csv",
+      "file_status": "found",
+      "rows": 90,
+      "success_count": 90,
+      "failed_count": 0,
+      "included": true
+    },
+    {
+      "model": "groq-compound",
+      "path": "C:\\Users\\bNd\\Documents\\New project\\phishing-llm-sbseg2026\\results\\comparacao_100_seed_v1\\results_groq-compound.csv",
+      "file_status": "found",
+      "rows": 90,
+      "success_count": 90,
+      "failed_count": 0,
+      "included": true
+    }
+  ],
+  "included_models": [
+    "groq-qwen3-32b",
+    "groq-llama-3-3-70b",
+    "groq-compound",
+    "groq-gpt-oss-120b"
+  ],
+  "note": "Comparativo principal usa apenas modelos com pelo menos min_success respostas validas. Modelos incompletos permanecem preservados nos CSVs individuais."
+}
