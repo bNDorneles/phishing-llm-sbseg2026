@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.red_flags import RED_FLAGS
+from src.red_flags import RED_FLAG_ALIASES, RED_FLAGS
 
 
 def setup_logging(log_path: Path) -> None:
@@ -52,7 +52,11 @@ def normalize_response(payload: dict[str, Any]) -> dict[str, Any]:
         label = "phishing" if "phish" in label else "safe"
 
     red_flags = payload.get("red_flags", {}) or {}
-    normalized_flags = {flag: int(bool(red_flags.get(flag, 0))) for flag in RED_FLAGS}
+    normalized_flags = {flag: 0 for flag in RED_FLAGS}
+    for raw_flag, raw_value in red_flags.items():
+        flag = RED_FLAG_ALIASES.get(str(raw_flag), str(raw_flag))
+        if flag in normalized_flags and bool(raw_value):
+            normalized_flags[flag] = 1
 
     scores = payload.get("scores", {}) or {}
     normalized_scores = {

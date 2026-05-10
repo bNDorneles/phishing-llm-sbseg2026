@@ -27,8 +27,11 @@ def run_model_on_dataset(
     experiment: ExperimentConfig,
     run_dir: Path,
     limit: int | None = None,
+    checkpoint_path: Path | None = None,
+    checkpoint_existing: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     rows = []
+    checkpoint_base = checkpoint_existing.copy() if checkpoint_existing is not None else pd.DataFrame()
     raw_dir = run_dir / "raw_responses" / model_config.name
     raw_dir.mkdir(parents=True, exist_ok=True)
     eval_df = dataset.head(limit).copy() if limit else dataset.copy()
@@ -182,12 +185,28 @@ def run_model_on_dataset(
 
         _write_raw_response(raw_dir, row_result, raw_text)
         rows.append(row_result)
+        _write_incremental_checkpoint(checkpoint_path, checkpoint_base, rows)
         if model_config.provider != "mock" and experiment.sleep_between_requests_seconds > 0:
             time.sleep(experiment.sleep_between_requests_seconds)
 
     results = pd.DataFrame(rows)
     _write_batch_summary(results, run_dir, model_config, expected_total)
     return results
+
+
+def _write_incremental_checkpoint(
+    checkpoint_path: Path | None,
+    checkpoint_base: pd.DataFrame,
+    rows: list[dict],
+) -> None:
+    if checkpoint_path is None:
+        return
+    current = pd.DataFrame(rows)
+    combined = pd.concat([checkpoint_base, current], ignore_index=True) if not checkpoint_base.empty else current
+    if {"sample_id", "model"}.issubset(combined.columns):
+        combined = combined.drop_duplicates(subset=["sample_id", "model"], keep="last")
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    combined.to_csv(checkpoint_path, index=False)
 
 
 def _new_request_id(model: str, sample_id: str) -> str:

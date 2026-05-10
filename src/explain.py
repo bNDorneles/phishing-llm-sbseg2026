@@ -9,6 +9,27 @@ import pandas as pd
 from src.red_flags import RED_FLAGS
 
 
+RED_FLAG_LABELS = {
+    "remetente_suspeito": "Remetente suspeito",
+    "senso_urgencia_medo": "Urgencia ou medo",
+    "solicitacao_dados_sensiveis": "Dados sensiveis",
+    "links_suspeitos": "Links suspeitos",
+    "erros_gramaticais": "Erros gramaticais",
+    "email_nao_solicitado": "Email nao solicitado",
+    "saudacao_generica": "Saudacao generica",
+    "anexos_suspeitos": "Anexos suspeitos",
+    "formatacao_estranha": "Formatacao estranha",
+    "oferta_boa_demais": "Oferta boa demais",
+    "dominio_suspeito": "Dominio suspeito",
+    "historias_elaboradas": "Historias elaboradas",
+    "personalizacao_excessiva": "Personalizacao excessiva",
+    "contato_ausente_ou_inconsistente": "Contato ausente ou inconsistente",
+    "conteudo_emocional": "Conteudo emocional",
+    "endereco_resposta_diferente": "Endereco de resposta diferente",
+    "botoes_enganosos": "Botoes enganosos",
+}
+
+
 def run_shap_analysis(results: pd.DataFrame, output_dir: Path) -> None:
     shap_dir = output_dir / "shap"
     shap_dir.mkdir(parents=True, exist_ok=True)
@@ -52,10 +73,32 @@ def run_shap_analysis(results: pd.DataFrame, output_dir: Path) -> None:
     ).sort_values("importance", ascending=False)
     importance.to_csv(shap_dir / "shap_importance.csv", index=False)
 
-    plt.figure(figsize=(10, 6))
-    shap.summary_plot(values, x_test, show=False, plot_size=(10, 6))
-    plt.tight_layout()
-    plt.savefig(shap_dir / "shap_summary.png", dpi=180, bbox_inches="tight")
+    x_display = x_test.rename(columns=RED_FLAG_LABELS)
+    plt.figure(figsize=(10.5, 7.2))
+    shap.summary_plot(values, x_display, show=False, plot_size=(10.5, 7.2))
+    fig = plt.gcf()
+    ax = plt.gca()
+    ax.set_title("Impacto das red flags na predicao de phishing", fontsize=13, fontweight="bold", pad=14)
+    ax.set_xlabel("Valor SHAP: impacto na predicao de phishing")
+    for item in fig.axes:
+        if item is not ax:
+            if item.get_ylabel() == "Feature value":
+                item.set_ylabel("Valor da red flag")
+            tick_labels = [tick.get_text() for tick in item.get_yticklabels()]
+            if tick_labels == ["Low", "High"]:
+                item.set_yticklabels(["Baixo", "Alto"])
+    fig.text(
+        0.01,
+        0.01,
+        "Pontos = emails avaliados. SHAP positivo aumenta a predicao de phishing; negativo reduz. "
+        "Vermelho = red flag presente/forte; azul = ausente/fraca.",
+        ha="left",
+        va="bottom",
+        fontsize=9,
+        color="#374151",
+    )
+    plt.tight_layout(rect=(0, 0.06, 1, 0.96))
+    plt.savefig(shap_dir / "shap_summary.png", dpi=300, bbox_inches="tight")
     plt.close()
 
 

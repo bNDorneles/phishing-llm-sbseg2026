@@ -1,65 +1,118 @@
-# Experiments
+# Experimentos
 
-Este documento lista comandos comuns para executar experimentos.
+Este documento registra o protocolo experimental recomendado para o artigo SBSeg e comandos de reproducao.
 
-Modelos Groq configurados em `config/models.yaml`:
+## Protocolo Principal: 100 Emails
 
-- `groq-gpt-oss-120b`
-- `groq-llama-3-3-70b`
-- `groq-compound`
-- `groq-qwen3-32b`
+O protocolo principal tem 100 emails no total:
 
-## Mock Local
+- 10 emails de calibracao tecnica;
+- 90 emails de avaliacao comparativa.
 
-Valida o pipeline sem custo e sem API key:
+As chamadas de LLM sao independentes e sem memoria. Portanto, a calibracao serve para validar prompt, parser, red flags e logs; ela nao treina os modelos e nao deve entrar nas metricas principais. O artigo deve comparar os modelos somente sobre os 90 emails de avaliacao.
+
+Run principal:
+
+```text
+results/comparacao_100_seed_v1/
+```
+
+## Preparacao dos Dados
+
+```powershell
+python scripts\prepare_small_protocol.py --seed 2026 --total-size 100 --calibration-size 10
+```
+
+Saidas esperadas:
+
+```text
+data\processed\phishing_calibration_10_seed2026.csv
+data\processed\phishing_eval_90_seed2026.csv
+```
+
+## Calibracao
+
+```powershell
+python scripts\run_experiment.py --dataset data\processed\phishing_calibration_10_seed2026.csv --models groq-llama-3-3-70b groq-qwen3-32b groq-compound groq-gpt-oss-120b --run-id calibracao_redflags_v1 --max-email-chars 3000
+```
+
+Use a calibracao para conferir:
+
+- se o JSON esta sendo parseado;
+- se as red flags estao coerentes;
+- se os logs preservam rastreabilidade;
+- se a chave e os limites da Groq estao funcionando.
+
+## Comparacao de 90 Emails
+
+```powershell
+python scripts\run_experiment.py --dataset data\processed\phishing_eval_90_seed2026.csv --models groq-gpt-oss-120b groq-llama-3-3-70b groq-qwen3-32b groq-compound --run-id comparacao_100_seed_v1 --max-email-chars 3000
+```
+
+Se a execucao parar por limite, continuar com o mesmo `run-id`:
+
+```powershell
+python scripts\run_experiment.py --dataset data\processed\phishing_eval_90_seed2026.csv --models groq-compound --run-id comparacao_100_seed_v1 --max-email-chars 1000 --resume
+```
+
+O `groq/compound` pode acionar modelos internos e retornar 429 para modelos que nao aparecem diretamente no comando. Para o artigo, ele so entra no comparativo final quando tiver 90 respostas com `status=success`.
+
+## Reconstrucao de Artefatos
+
+Recalcular metricas, consolidar CSVs individuais e gerar figuras academicas:
+
+```powershell
+python scripts\rebuild_comparison_artifacts.py --run-id comparacao_100_seed_v1
+```
+
+Comportamento padrao:
+
+- le `results_<modelo>.csv`;
+- exige 90 sucessos por modelo;
+- exclui modelos incompletos do `final_results.csv`;
+- preserva os CSVs individuais;
+- gera figuras novas em `plots_paper/`;
+- preserva figuras antigas em `plots/`;
+- grava `rebuild_manifest.json`.
+
+Para diagnosticar um modelo incompleto:
+
+```powershell
+python scripts\rebuild_comparison_artifacts.py --run-id comparacao_100_seed_v1 --allow-partial
+```
+
+Nao usar `--allow-partial` para figuras principais do artigo.
+
+## Modelos
+
+| ID local | Modelo Groq |
+|---|---|
+| `groq-gpt-oss-120b` | `openai/gpt-oss-120b` |
+| `groq-llama-3-3-70b` | `llama-3.3-70b-versatile` |
+| `groq-qwen3-32b` | `qwen/qwen3-32b` |
+| `groq-compound` | `groq/compound` |
+
+## Rodadas Maiores
+
+Rodadas com cortes maiores devem ser tratadas como exploratorias nesta versao do projeto. Elas nao devem substituir a comparacao principal, a menos que seja definido um corte justo entre pelo menos dois modelos com o mesmo numero de emails avaliados.
+
+Diretriz para o paper atual:
+
+- resultado central: comparacao dos modelos no protocolo de 90 emails avaliativos;
+- calibracao: descrita como etapa metodologica;
+- rodadas maiores: material secundario ou trabalho futuro, se ainda nao houver corte justo.
+
+## Smoke Test Local
+
+Para validar o pipeline sem API:
 
 ```powershell
 python scripts\run_experiment.py --models mock --limit 20 --run-id smoke_mock_20
 ```
 
-## Groq com 20 Amostras
+## Saidas
 
-```powershell
-python scripts\run_experiment.py --models groq-gpt-oss-120b --limit 20
-```
-
-## Groq com 100 Amostras
-
-```powershell
-python scripts\run_experiment.py --models groq-gpt-oss-120b --limit 100
-```
-
-## Groq com 1009 Amostras
-
-```powershell
-python scripts\run_experiment.py --models groq-gpt-oss-120b
-```
-
-Para reduzir risco de 429 em contas com cota baixa, rode a amostra de 1009 um modelo por vez:
-
-```powershell
-python scripts\run_experiment.py --models groq-llama-3-3-70b --run-id final_1009_llama_70b
-python scripts\run_experiment.py --models groq-gpt-oss-120b --run-id final_1009_gpt_oss_120b
-python scripts\run_experiment.py --models groq-qwen3-32b --run-id final_1009_qwen3_32b
-```
-
-Se o limite diario encerrar a rodada antes do fim, repita o mesmo comando com `--resume` depois do reset da cota:
-
-```powershell
-python scripts\run_experiment.py --models groq-gpt-oss-120b --run-id final_1009_gpt_oss_120b --resume
-```
-
-## Multiplos Modelos Groq
-
-```powershell
-python scripts\run_experiment.py --models groq-gpt-oss-120b groq-llama-3-3-70b groq-compound groq-qwen3-32b
-```
-
-`groq/compound` fica disponivel para comparacao, mas pode acionar modelos internos e gerar 429 citando outro `model_id`. Use-o como rodada separada se quiser preservar a execucao principal.
-
-## Outputs
-
-Cada execucao cria:
+Cada execucao cria ou atualiza:
 
 ```text
 results/<run_id>/
@@ -67,6 +120,7 @@ results/<run_id>/
 
 Arquivos principais:
 
+- `results_<modelo>.csv`
 - `final_results.csv`
 - `metrics_by_model.csv`
 - `false_positives.csv`
@@ -75,32 +129,10 @@ Arquivos principais:
 - `batch_summary_<modelo>.json`
 - `raw_responses/`
 - `plots/`
-- `shap/`
+- `plots_paper/`
 
-Relatorios consolidados sao atualizados em:
+Relatorios consolidados ficam em:
 
 ```text
 reports/
-```
-
-## Regenerar Graficos sem Chamar a API
-
-Se uma execucao ja possui `results/<run_id>/final_results.csv`, voce pode recriar metricas, graficos e relatorios sem fazer novas chamadas aos modelos:
-
-```powershell
-python scripts\regenerate_artifacts.py --run-id nome_da_execucao --skip-shap
-```
-
-## Selecionar Modelos por `.env`
-
-Tambem e possivel definir modelos no `.env`:
-
-```env
-GROQ_MODELS=groq-gpt-oss-120b,groq-llama-3-3-70b
-```
-
-Depois rode:
-
-```powershell
-python scripts\run_experiment.py --limit 20 --run-id teste_env_models
 ```

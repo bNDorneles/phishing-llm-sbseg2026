@@ -1,270 +1,159 @@
 # phishing-llm-sbseg2026
 
-Pipeline reprodutivel para avaliacao comparativa de Large Language Models (LLMs) na deteccao de phishing em emails.
+Pipeline reprodutivel para comparar Large Language Models (LLMs) na deteccao de phishing em emails, com foco em uma submissao academica ao SBSeg.
 
 ## Objetivo
 
-Este projeto implementa um protocolo experimental para comparar LLMs na tarefa de classificar emails como `phishing` ou `safe`, extrair red flags, gerar um dataset vetorial, calcular metricas, produzir graficos, aplicar SHAP sobre um classificador Random Forest e gerar relatorios Markdown.
+O projeto avalia se LLMs recentes conseguem classificar emails como `phishing` ou `safe` e, ao mesmo tempo, registrar red flags explicaveis que apoiem a analise dos erros. A contribuicao esperada nao e um produto de deteccao em producao, mas um protocolo experimental rastreavel para discutir desempenho, cobertura, falsos positivos, falsos negativos e sinais linguisticos/comportamentais em emails de phishing.
 
-O foco do repositorio e pesquisa aplicada em ciberseguranca. Ele nao pretende propor um produto novo de deteccao de phishing, mas sim apoiar uma replicacao e atualizacao reprodutivel de um estudo academico anterior.
+## Protocolo Principal
 
-## Contexto Academico
+A comparacao principal usa o run:
 
-O projeto parte de uma linha metodologica anterior sobre avaliacao de LLMs para deteccao de phishing, atualizando o protocolo experimental com modelos recentes executados via Groq e uma estrutura mais completa de reprodutibilidade. A proposta preserva a ideia central de comparar modelos sob um mesmo prompt, uma mesma amostra e as mesmas metricas, mas organiza uma nova versao do estudo para 2026.
+```text
+results/comparacao_100_seed_v1/
+```
 
-Tambem sao reaproveitadas ideias tecnicas de trabalhos com fake news, apenas como base de engenharia experimental: pipeline com LLM, geracao de dataset, integracao com Python, Random Forest, SHAP e relatorios. O dominio final permanece phishing.
+O protocolo tem 100 emails no total:
 
-## Relacao com SBSeg 2026
+- 10 emails de calibracao tecnica, usados para validar prompt, red flags, parser e logs;
+- 90 emails de avaliacao, usados nas metricas principais do artigo.
 
-Este repositorio foi estruturado como artefato de pesquisa para uma submissao ao SBSeg 2026. As principais preocupacoes sao:
+A calibracao nao e misturada nas metricas comparativas. Ela deve aparecer no artigo como etapa metodologica separada. A comparacao final so deve incluir modelos com 90 respostas validas na avaliacao.
 
-- reprodutibilidade;
-- separacao entre baseline historico e resultados novos;
-- preservacao local de respostas brutas;
-- rastreabilidade de configuracoes;
-- seguranca no uso de API keys;
-- documentacao clara para avaliadores e coautores.
+## Modelos Comparados
 
-## O Que o Projeto Faz
+Modelos configurados via Groq:
 
-- Le `Phishing_Email.csv`.
-- Remove emails vazios.
-- Normaliza labels para `phishing` e `safe`.
-- Gera amostra estratificada com seed fixa.
-- Executa diferentes modelos hospedados na Groq, alem de `mock` para teste local.
-- Solicita resposta JSON padronizada.
-- Extrai 20 red flags de phishing.
-- Salva respostas brutas localmente.
-- Gera `final_results.csv` com predicoes, red flags, scores, temperatura e modelo.
-- Calcula accuracy, precision, recall, F1-score, TP, TN, FP e FN.
-- Gera graficos e matrizes de confusao.
-- Treina Random Forest sobre red flags e aplica SHAP.
-- Atualiza relatorios Markdown automaticamente.
+| ID local | Modelo Groq |
+|---|---|
+| `groq-gpt-oss-120b` | `openai/gpt-oss-120b` |
+| `groq-llama-3-3-70b` | `llama-3.3-70b-versatile` |
+| `groq-qwen3-32b` | `qwen/qwen3-32b` |
+| `groq-compound` | `groq/compound` |
 
-## Estrutura de Pastas
+O `groq/compound` pode acionar modelos internos e sofrer limites de cota diferentes dos demais. Por isso, ele deve entrar nas figuras finais apenas quando atingir 90 sucessos na rodada principal.
+
+## Estrutura
 
 ```text
 phishing-llm-sbseg2026/
-  config/              # YAMLs de experimento e modelos
-  data/
-    raw/               # dataset bruto local, nao versionado
-    processed/         # amostras processadas locais, nao versionadas
-    baseline_historico/# resultados historicos locais, nao versionados
-  docs/                # documentacao operacional
-  paper/               # notas metodologicas e rascunhos
-  reports/             # relatorios gerados automaticamente
-  results/             # outputs de execucao, nao versionados
-  scripts/             # comandos de preparacao e execucao
-  src/                 # codigo do pipeline
+  config/       # configuracoes de modelos e experimento
+  data/         # dados locais; datasets grandes nao sao versionados
+  docs/         # documentacao operacional e metodologica
+  paper/        # notas e contexto para escrita do artigo
+  reports/      # relatorios Markdown gerados
+  results/      # saidas locais das rodadas experimentais
+  scripts/      # preparacao, execucao e reconstrucao de artefatos
+  src/          # codigo do pipeline
 ```
+
+Rodadas antigas ou exploratorias devem ficar em `results/_archive/`. O run `comparacao_100_seed_v1` e a referencia local para o paper.
 
 ## Instalacao
 
-Crie e ative um ambiente virtual:
-
 ```powershell
-cd phishing-llm-sbseg2026
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Se `python` nao estiver no PATH, tente:
-
-```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-```
-
-## Configuracao do `.env`
-
-Copie o exemplo:
+Copie o arquivo de ambiente e informe a chave da Groq:
 
 ```powershell
 copy .env.example .env
 ```
 
-Preencha a chave da Groq:
-
 ```env
 GROQ_API_KEY=
+GROQ_MODELS=groq-gpt-oss-120b,groq-llama-3-3-70b,groq-compound,groq-qwen3-32b
+LLM_MAX_ATTEMPTS=3
+LLM_REQUEST_TIMEOUT_SECONDS=90
+LLM_BACKOFF_BASE_SECONDS=1
+LLM_BACKOFF_MAX_SECONDS=30
+GROQ_RATE_LIMIT_SAFETY_FACTOR=1.2
+GROQ_MIN_REMAINING_TOKENS=0
+LLM_SLEEP_BETWEEN_REQUESTS_SECONDS=0
 ```
 
-Nunca envie `.env` para o GitHub.
+Nunca versionar `.env`, datasets brutos, resultados completos ou respostas brutas.
 
-O retry, timeout e backoff ja ficam configurados automaticamente em `config/experiment.yaml`.
+## Preparar o Protocolo de 100 Emails
 
-## Dados
+```powershell
+python scripts\prepare_small_protocol.py --seed 2026 --total-size 100 --calibration-size 10
+```
 
-O dataset nao e versionado neste repositorio. Baixe ou adicione manualmente `Phishing_Email.csv` em:
+Arquivos esperados:
 
 ```text
-data/raw/Phishing_Email.csv
+data/processed/phishing_calibration_10_seed2026.csv
+data/processed/phishing_eval_90_seed2026.csv
 ```
 
-Tambem e possivel usar o ZIP local esperado pelo script:
-
-```text
-data/raw/Phishing_Email.csv.zip
-```
-
-Prepare a amostra oficial:
+## Rodar Calibracao
 
 ```powershell
-python scripts\prepare_dataset.py
+python scripts\run_experiment.py --dataset data\processed\phishing_calibration_10_seed2026.csv --models groq-llama-3-3-70b groq-qwen3-32b groq-compound groq-gpt-oss-120b --run-id calibracao_redflags_v1 --max-email-chars 3000
 ```
 
-Ou informe um caminho externo:
+## Rodar Comparacao Principal
 
 ```powershell
-python scripts\prepare_dataset.py --zip-path caminho/para/Phishing_Email.csv.zip
+python scripts\run_experiment.py --dataset data\processed\phishing_eval_90_seed2026.csv --models groq-gpt-oss-120b groq-llama-3-3-70b groq-qwen3-32b groq-compound --run-id comparacao_100_seed_v1 --max-email-chars 3000
 ```
 
-O script gera uma amostra de 1.009 emails com seed 42, composta por 602 emails safe e 407 emails phishing.
-
-## Teste Pequeno
-
-Use o modelo `mock` para validar o pipeline sem custo e sem chaves:
+Para continuar sem refazer sucessos:
 
 ```powershell
-python scripts\run_experiment.py --models mock --limit 20 --run-id smoke_mock_20
+python scripts\run_experiment.py --dataset data\processed\phishing_eval_90_seed2026.csv --models groq-compound --run-id comparacao_100_seed_v1 --max-email-chars 1000 --resume
 ```
 
-## Experimento Real
+## Reconstruir Resultados e Figuras do Paper
 
-Habilite modelos Groq em `config/models.yaml` alterando `enabled: false` para `enabled: true`, ou informe modelos explicitamente:
+Depois de uma rodada, regenere os artefatos sem chamar a API:
 
 ```powershell
-python scripts\run_experiment.py --models groq-gpt-oss-120b --limit 20
-python scripts\run_experiment.py --models groq-gpt-oss-120b groq-llama-3-3-70b groq-compound groq-qwen3-32b --limit 20
+python scripts\rebuild_comparison_artifacts.py --run-id comparacao_100_seed_v1
 ```
 
-Modelos Groq configurados:
+Esse comando:
 
-- `groq-gpt-oss-120b`: `openai/gpt-oss-120b`
-- `groq-llama-3-3-70b`: `llama-3.3-70b-versatile`
-- `groq-compound`: `groq/compound`
-- `groq-qwen3-32b`: `qwen/qwen3-32b`
+- le os arquivos `results_<modelo>.csv`;
+- inclui apenas modelos com pelo menos 90 sucessos;
+- reconstrui `final_results.csv`;
+- recalcula `metrics_by_model.csv`;
+- atualiza `false_positives.csv`, `false_negatives.csv` e `parse_errors.csv`;
+- cria PNGs academicos em `results/comparacao_100_seed_v1/plots_paper/`;
+- preserva os PNGs antigos em `results/comparacao_100_seed_v1/plots/`.
 
-Para a amostra oficial completa:
+Para diagnostico, existe `--allow-partial`, mas ele nao deve ser usado para as figuras principais do artigo.
 
-```powershell
-python scripts\run_experiment.py --models groq-gpt-oss-120b groq-llama-3-3-70b groq-compound groq-qwen3-32b
-```
+## Saidas Principais
 
-Se a sua conta bater limite diario antes dos 1.009 e-mails, rode novamente no dia seguinte com o mesmo `--run-id` e `--resume`. O pipeline reaproveita linhas com `status=success` e tenta apenas pendentes/falhas:
+Em `results/comparacao_100_seed_v1/`:
 
-```powershell
-python scripts\run_experiment.py --models groq-gpt-oss-120b --run-id final_1009_gpt_oss_120b --resume
-```
+- `results_<modelo>.csv`: saida individual de cada modelo;
+- `final_results.csv`: consolidado apenas com modelos aptos ao comparativo final;
+- `metrics_by_model.csv`: metricas de classificacao;
+- `red_flag_frequency.csv`: frequencia media das red flags;
+- `plots/`: graficos antigos preservados;
+- `plots_paper/`: graficos novos, legiveis e adequados ao artigo;
+- `rebuild_manifest.json`: registro de quais modelos entraram ou ficaram fora.
 
-## Interpretacao dos Resultados
+## Interpretacao
 
-Cada execucao cria uma pasta em `results/<run_id>/` com:
+As metricas usam `phishing` como classe positiva:
 
-- `final_results.csv`: saida vetorial completa.
-- `metrics_by_model.csv`: accuracy, precision, recall, F1, TP, TN, FP e FN.
-- `batch_summary_<modelo>.json`: validacao de cobertura do lote.
-- `false_positives.csv`: emails safe classificados como phishing.
-- `false_negatives.csv`: emails phishing classificados como safe.
-- `raw_responses/`: respostas brutas locais por modelo e email.
-- `plots/`: graficos de metricas, F1, matriz de confusao e red flags.
-- `shap/`: importancia SHAP quando dependencias estao instaladas.
+- `precision`: entre alertas de phishing, quantos eram phishing de fato;
+- `recall`: entre phishing reais, quantos foram detectados;
+- `specificity`: entre emails seguros, quantos foram preservados como seguros;
+- `f1`: equilibrio entre precision e recall;
+- `false_negative_rate`: phishing que passou como seguro, erro mais critico para seguranca.
 
-Os relatorios Markdown ficam em `reports/`.
+Falhas de API, parser ou limite de cota nao devem ser escondidas. Elas ficam registradas nos CSVs individuais e no manifesto de reconstrucao. Quando um modelo nao fecha 90 sucessos, ele fica fora do comparativo principal ate a rodada ser completada.
 
-Cada linha de `final_results.csv` recebe `status` final (`success` ou `failed`), `request_id`, `email_hash`, `attempts`, `latency_seconds`, `api_status_code` e `error_type`.
-Falhas de JSON estrito aparecem como `json_mode_validation`; nesses casos o pipeline faz uma tentativa automatica sem o modo JSON estrito da API e continua salvando a resposta bruta.
+## Artigo
 
-## Rate Limit 429
-
-Erro `429 Too Many Requests` indica limite de requisicoes ou cota da Groq. Solucoes recomendadas:
-
-- reduzir `--limit` durante testes;
-- rodar um modelo por vez;
-- aumentar pausas e retries em `config/experiment.yaml`;
-- verificar cota e plano da Groq;
-- evitar repetir a amostra completa sem necessidade.
-
-As chamadas de API usam duas protecoes:
-
-- ritmo preventivo baseado nos limites oficiais da Groq por modelo;
-- retry com exponential backoff + full jitter para falhas transientes.
-- fallback automatico sem `response_format` quando a API falha com `json_validate_failed`, mantendo o parser local de JSON.
-
-Para os modelos configurados, os limites documentados sao:
-
-| Modelo | RPM | RPD | TPM | TPD |
-|---|---:|---:|---:|---:|
-| `openai/gpt-oss-120b` | 30 | 1K | 8K | 200K |
-| `llama-3.3-70b-versatile` | 30 | 1K | 12K | 100K |
-| `groq/compound` | 30 | 250 | 70K | - |
-| `qwen/qwen3-32b` | 60 | 1K | 6K | 500K |
-
-Quando a API retorna `429`, o pipeline respeita o header `retry-after`. Quando os headers `x-ratelimit-reset-tokens` ou `x-ratelimit-reset-requests` indicam reset necessario, o pipeline agenda espera antes da proxima chamada. Erros nao retentaveis, como autenticacao, modelo inexistente e payload invalido, falham sem repetir chamadas desnecessarias.
-
-O modelo `groq/compound` pode acionar modelos internos durante a execucao. Por isso, o pipeline usa uma cadencia mais conservadora para ele e tenta ler tambem mensagens como `Please try again in 705ms` quando o header `retry-after` nao vem preenchido.
-
-Alguns modelos Groq documentam RPD de 1.000 requisicoes, enquanto a amostra oficial tem 1.009 e-mails. Se sua organizacao estiver nesse limite, use `--resume` no mesmo `run-id` depois do reset diario para concluir os e-mails restantes sem refazer os sucessos.
-
-Configuracao padrao em `config/experiment.yaml`:
-
-```yaml
-retry_attempts: 3
-request_timeout_seconds: 90
-backoff_base_seconds: 1
-backoff_max_seconds: 30
-groq_rate_limit_safety_factor: 1.2
-groq_min_remaining_tokens: 0
-sleep_between_requests_seconds: 0
-```
-
-Na pratica, para usar o projeto voce so precisa configurar `GROQ_API_KEY`.
-
-## Logs e Observabilidade
-
-Cada execucao gera `results/<run_id>/experiment.log`. Os eventos sao registrados em formato estruturado JSON no campo da mensagem, com:
-
-- `email_id`;
-- `email_hash`;
-- `request_id`;
-- `provider_request_id`, quando retornado pela API;
-- modelo e `model_id`;
-- tentativa atual;
-- latencia;
-- status final;
-- tipo de erro.
-
-O conteudo completo do e-mail nao e logado. Para auditoria, respostas brutas ficam em `raw_responses/`, que nao deve ser versionado.
-
-## Reproducibilidade
-
-O protocolo principal usa:
-
-- seed 42;
-- amostra de 1.009 emails;
-- 602 emails safe e 407 phishing;
-- prompts versionados;
-- red flags versionadas;
-- respostas brutas preservadas localmente;
-- resultados historicos separados em `data/baseline_historico/`.
-
-Para repetir uma execucao, mantenha o mesmo dataset, o mesmo `config/experiment.yaml`, o mesmo `config/models.yaml` e o mesmo `run-id`.
-
-## Proximos Passos
-
-- Criar comparador automatico entre resultados historicos e resultados 2026.
-- Adicionar controle de custo por modelo Groq.
-- Adicionar suporte a execucao em lotes com pausa entre requisicoes.
-- Consolidar tabelas finais para o artigo.
-- Criar pacote de artefatos anonimizados para submissao double blind.
-
-## Aviso de Seguranca
-
-Nunca suba `.env`, API keys, tokens, logs com segredo, datasets privados ou respostas brutas sensiveis. Antes de publicar, execute uma busca por chaves e revise `git status`.
-
-## Aviso de Dados
-
-Datasets grandes, arquivos `.csv`, ZIPs, resultados reais e respostas brutas nao devem ser versionados. Eles devem ser baixados/adicionados manualmente em `data/raw/` e recriados pelo pipeline.
+O arquivo `paper/contexto_artigo_sbseg2026.md` concentra o contexto para escrita assistida no PRISMA/ChatGPT. Ele deve ser usado como guia para formular o artigo sem inventar resultados alem dos CSVs disponiveis.

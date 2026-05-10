@@ -1,54 +1,79 @@
-# Reproducibility
+# Reprodutibilidade
 
-Este projeto foi estruturado para permitir repeticao controlada dos experimentos.
+Este projeto foi organizado para repetir a comparacao principal sem misturar calibracao, avaliacao e rodadas exploratorias.
 
 ## Protocolo Principal
 
-- Seed fixa: `42`.
-- Tamanho da amostra: `1009`.
-- Proporcao da amostra: `602 safe / 407 phishing`.
-- Labels normalizados: `safe` e `phishing`.
+- Run: `comparacao_100_seed_v1`.
+- Total metodologico: 100 emails.
+- Calibracao tecnica: 10 emails.
+- Avaliacao comparativa: 90 emails.
+- Classe positiva: `phishing`.
 - Prompt padronizado em `src/prompts.py`.
-- Red flags padronizadas em `src/red_flags.py`.
+- Red flags canonicas em `src/red_flags.py`.
 - Configuracoes em `config/experiment.yaml` e `config/models.yaml`.
-- Validacao por modelo: `total_entrada == total_processado_sucesso + total_processado_falha`.
-- Ritmo de chamadas Groq baseado nos limites oficiais de RPM/TPM por modelo e nos headers retornados pela API.
+
+A calibracao valida o aparato experimental e nao entra nas metricas principais. O comparativo final deve incluir apenas modelos com 90 respostas validas na avaliacao.
+
+## Arquivos de Referencia
+
+CSV individual por modelo:
+
+```text
+results/comparacao_100_seed_v1/results_<modelo>.csv
+```
+
+Consolidado reconstruido:
+
+```text
+results/comparacao_100_seed_v1/final_results.csv
+```
+
+Manifesto de inclusao/exclusao:
+
+```text
+results/comparacao_100_seed_v1/rebuild_manifest.json
+```
+
+## Reconstrucao
+
+Para recriar metricas, relatorios e PNGs academicos sem chamar API:
+
+```powershell
+python scripts\rebuild_comparison_artifacts.py --run-id comparacao_100_seed_v1
+```
+
+O script exige 90 sucessos por modelo. Modelos incompletos permanecem preservados nos CSVs individuais, mas ficam fora de `final_results.csv` e das figuras principais.
 
 ## Respostas Brutas
 
-As respostas brutas dos LLMs sao preservadas localmente em:
+Respostas dos LLMs ficam localmente em:
 
 ```text
 results/<run_id>/raw_responses/
 ```
 
-Esses arquivos nao sao versionados, pois podem conter dados sensiveis, custos altos para recriar e saidas longas dos modelos.
+Esses arquivos nao devem ser versionados porque podem conter textos longos, dados sensiveis e saidas custosas de recriar.
 
 ## Cobertura do Lote
 
-Cada e-mail processado recebe uma linha em `final_results.csv` com:
+Cada linha processada registra:
 
 - `status`: `success` ou `failed`;
 - `request_id`: identificador correlacionavel nos logs;
-- `email_hash`: hash curto do conteudo, sem expor o texto completo;
+- `email_hash`: hash curto do conteudo;
 - `attempts`: tentativas usadas;
 - `latency_seconds`: latencia total;
 - `error_type`: tipo de falha, quando houver.
 
-Cada modelo gera tambem `batch_summary_<modelo>.json`, com a validacao formal de cobertura.
+Cada modelo tambem gera `batch_summary_<modelo>.json`.
 
-## Como Repetir uma Execucao
+## Como Repetir
 
-1. Use o mesmo `Phishing_Email.csv`.
-2. Mantenha `config/experiment.yaml` inalterado.
-3. Mantenha os mesmos modelos em `config/models.yaml`.
-4. Execute novamente com o mesmo comando.
+1. Usar o mesmo dataset processado de avaliacao.
+2. Manter as configuracoes do experimento.
+3. Rodar com o mesmo `run-id`.
+4. Usar `--resume` para completar apenas pendentes/falhas.
+5. Reconstruir artefatos com `scripts\rebuild_comparison_artifacts.py`.
 
-Exemplo:
-
-```powershell
-python scripts\prepare_dataset.py
-python scripts\run_experiment.py --models mock --limit 20 --run-id smoke_mock_20
-```
-
-Para execucoes via Groq, pequenas variacoes ainda podem ocorrer por mudancas de modelo, infraestrutura da API ou politicas internas do servico.
+Execucoes via API podem variar por mudancas de modelo, cota, infraestrutura ou politicas internas do provedor. Por isso, respostas brutas, logs e manifestos devem ser preservados localmente.

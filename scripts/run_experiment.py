@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
@@ -28,16 +29,25 @@ def main() -> None:
     parser.add_argument("--limit", type=int, help="Limita quantidade de emails para teste rapido.")
     parser.add_argument("--run-id", help="Identificador manual da execucao.")
     parser.add_argument("--resume", action="store_true", help="Reaproveita sucessos existentes no mesmo run-id e processa apenas pendentes/falhas.")
+    parser.add_argument("--dataset", help="CSV de amostra ja preparada. Ex.: data/processed/phishing_eval_90_seed2026.csv.")
+    parser.add_argument("--max-email-chars", type=int, help="Sobrescreve o corte maximo de caracteres por email nesta execucao.")
     args = parser.parse_args()
 
     experiment = load_experiment_config()
+    if args.max_email_chars:
+        experiment = replace(experiment, max_email_chars=args.max_email_chars)
     run_id = args.run_id or timestamp()
     run_dir = ROOT / "results" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     setup_logging(run_dir / "experiment.log")
     logging.info("Iniciando run %s", run_id)
 
-    if experiment.sample_dataset.exists():
+    if args.dataset:
+        dataset_path = _resolve_project_path(args.dataset)
+        if not dataset_path.exists():
+            raise FileNotFoundError(f"Dataset informado nao encontrado: {dataset_path}")
+        dataset = pd.read_csv(dataset_path)
+    elif experiment.sample_dataset.exists():
         dataset = pd.read_csv(experiment.sample_dataset)
     else:
         dataset = prepare_sample(
@@ -101,6 +111,11 @@ def _models_from_env() -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def _resolve_project_path(value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else ROOT / path
+
+
 def _run_or_resume_model(
     *,
     target_dataset: pd.DataFrame,
@@ -111,7 +126,14 @@ def _run_or_resume_model(
 ) -> pd.DataFrame:
     result_path = run_dir / f"results_{model.name}.csv"
     if not resume or not result_path.exists():
-        model_results = run_model_on_dataset(target_dataset, model, experiment, run_dir, limit=None)
+        model_results = run_model_on_dataset(
+            target_dataset,
+            model,
+            experiment,
+            run_dir,
+            limit=None,
+            checkpoint_path=result_path,
+        )
         model_results.to_csv(result_path, index=False)
         return model_results
 
@@ -133,7 +155,15 @@ def _run_or_resume_model(
     if pending_dataset.empty:
         combined = successful_existing
     else:
-        new_results = run_model_on_dataset(pending_dataset, model, experiment, run_dir, limit=None)
+        new_results = run_model_on_dataset(
+            pending_dataset,
+            model,
+            experiment,
+            run_dir,
+            limit=None,
+            checkpoint_path=result_path,
+            checkpoint_existing=successful_existing,
+        )
         combined = pd.concat([successful_existing, new_results], ignore_index=True)
 
     combined = combined.drop_duplicates(subset=["sample_id", "model"], keep="last")

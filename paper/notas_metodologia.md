@@ -9,13 +9,13 @@ Como modelos LLM recentes se comparam a resultados historicos de referencia na d
 1. Preparar o dataset `Phishing_Email.csv`.
 2. Remover textos vazios.
 3. Normalizar labels para `phishing` e `safe`.
-4. Selecionar amostra estratificada de 1.009 emails com seed 42.
-5. Aplicar o mesmo prompt a todos os modelos.
+4. Separar 10 emails de calibracao tecnica e 90 emails de avaliacao.
+5. Aplicar o mesmo prompt a todos os modelos na avaliacao.
 6. Exigir saida JSON com classificacao, probabilidade, red flags, scores e explicacao curta.
-7. Preservar respostas brutas.
-8. Calcular accuracy, precision, recall e F1-score.
-9. Treinar Random Forest sobre red flags para analise SHAP.
-10. Comparar resultados novos com baseline historico, sem misturar os CSVs.
+7. Preservar respostas brutas e CSVs individuais por modelo.
+8. Calcular accuracy, precision, recall, specificity e F1-score apenas sobre os 90 emails avaliativos.
+9. Gerar graficos academicos e tabelas a partir do consolidado reconstruido.
+10. Discutir resultados sem misturar calibracao e avaliacao.
 
 ## Observacao sobre fake news
 

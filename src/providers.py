@@ -20,7 +20,7 @@ except ModuleNotFoundError:
     _load_dotenv = None
 
 from src.config import ModelConfig, ROOT
-from src.prompts import SYSTEM_PROMPT, build_user_prompt
+from src.prompts import SYSTEM_PROMPT, build_compact_user_prompt, build_user_prompt
 from src.red_flags import RED_FLAGS
 from src.utils import log_event
 
@@ -354,14 +354,12 @@ def _chat_completion(
             error_type="configuration",
             retriable=False,
         )
+    messages = _build_messages(config, email_text)
     payload = {
         "model": config.model_id,
         "temperature": config.temperature,
         "max_tokens": config.max_tokens,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": build_user_prompt(email_text)},
-        ],
+        "messages": messages,
     }
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
@@ -422,6 +420,15 @@ def _chat_completion(
             rate_limit=rate_limit,
         ) from exc
     return str(content), response.status_code, provider_request_id, rate_limit
+
+
+def _build_messages(config: ModelConfig, email_text: str) -> list[dict[str, str]]:
+    if config.model_id == "groq/compound":
+        return [{"role": "user", "content": build_compact_user_prompt(email_text)}]
+    return [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": build_user_prompt(email_text)},
+    ]
 
 
 def load_project_env() -> None:
@@ -626,13 +633,10 @@ def mock_analysis(email_text: str) -> dict[str, Any]:
         "formatacao_estranha": r"!!!|\$\$\$|<html>|font-size|all caps",
         "oferta_boa_demais": r"free money|prize|lottery|million|gift card|reward",
         "dominio_suspeito": r"\.(ru|cn|xyz|top|tk)|paypal-|google-verify|bank-secure",
-        "remetente_falsificado": r"on behalf of|reply-to|spoof|do-not-reply",
         "historias_elaboradas": r"widow|inheritance|prince|foreign account|fund transfer",
         "personalizacao_excessiva": r"we know|your recent|personal record|case number",
-        "falta_contato": r"do not call|no phone|only reply",
+        "contato_ausente_ou_inconsistente": r"do not call|no phone|only reply|reply to.*@gmail|contact.*@yahoo|different email",
         "conteudo_emocional": r"fear|help me|threat|legal action|final warning",
-        "inconsistencias_contato": r"reply to.*@gmail|contact.*@yahoo|different email",
-        "anexos_estranhos": r"\.zip|\.rar|\.7z|macro|enable content",
         "endereco_resposta_diferente": r"reply-to|respond to this address",
         "botoes_enganosos": r"button|click the button|confirm button|secure button",
     }

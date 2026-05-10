@@ -36,11 +36,19 @@ Edite `.env` localmente:
 
 ```env
 GROQ_API_KEY=
+GROQ_MODELS=groq-gpt-oss-120b,groq-llama-3-3-70b,groq-compound,groq-qwen3-32b
+LLM_MAX_ATTEMPTS=3
+LLM_REQUEST_TIMEOUT_SECONDS=90
+LLM_BACKOFF_BASE_SECONDS=1
+LLM_BACKOFF_MAX_SECONDS=30
+GROQ_RATE_LIMIT_SAFETY_FACTOR=1.2
+GROQ_MIN_REMAINING_TOKENS=0
+LLM_SLEEP_BETWEEN_REQUESTS_SECONDS=0
 ```
 
 O arquivo `.env` e ignorado pelo Git.
 
-O backoff, timeout e controle de rate limit ja estao configurados em `config/experiment.yaml`. Nao e necessario adicionar outras variaveis no `.env` para uma execucao normal.
+O backoff, timeout e controle de rate limit tambem possuem valores em `config/experiment.yaml`. Quando preenchidas no `.env`, as variaveis acima sobrescrevem os valores padrao.
 
 ## 5. Preparar Dataset
 
